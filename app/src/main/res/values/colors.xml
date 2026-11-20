@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="mask_navy">#0F1B2D</color>
+    <color name="mask_navy_light">#1B2E47</color>
+    <color name="mask_teal">#00BFA6</color>
+    <color name="mask_teal_dark">#00897B</color>
+    <color name="mask_amber">#FFB300</color>
+    <color name="mask_red">#E53935</color>
+    <color name="mask_green">#43A047</color>
+    <color name="mask_card">#FFFFFF</color>
+    <color name="mask_background">#F2F4F7</color>
+    <color name="mask_text_primary">#141C2B</color>
+    <color name="mask_text_secondary">#5A6577</color>
+</resources>
