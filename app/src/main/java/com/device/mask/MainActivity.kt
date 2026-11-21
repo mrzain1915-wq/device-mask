@@ -346,6 +346,7 @@ private fun DeviceMaskApp() {
         Column(modifier = Modifier.fillMaxSize().background(PageBackground)) {
             Header(
                 active = isActiveThisBoot(lastActive),
+                needsReboot = needsReboot(context),
                 lastActiveText = lastActiveText(lastActive),
                 onRefresh = {
                     refreshTick++
@@ -381,11 +382,36 @@ private fun lastActiveText(lastActive: Long): String {
 /** LSPosed Manager version, if the manager app is installed. */
 @Suppress("DEPRECATION")
 private fun lsposedManagerVersion(context: Context): String {
+    // v1.0.28: check both known manager packages, and the manifest
+    // declares <queries> for them. Without that declaration, Android
+    // 11+ package visibility makes getPackageInfo fail even when the
+    // manager IS installed, so the row wrongly said "not installed".
+    val candidates = listOf("org.lsposed.manager", "com.android.lsposed.manager")
+    for (pkg in candidates) {
+        try {
+            val info = context.packageManager.getPackageInfo(pkg, 0)
+            return info.versionName ?: "installed (unknown version)"
+        } catch (e: Throwable) {
+            // Not this package: try the next candidate.
+        }
+    }
+    return "not detected"
+}
+
+/**
+ * True when Device Mask was installed or updated after the last boot.
+ * The LSPosed framework only loads a module's new code at boot, so
+ * after every update the user must reboot before the module can run —
+ * the Home card says so instead of just "inactive".
+ */
+@Suppress("DEPRECATION")
+private fun needsReboot(context: Context): Boolean {
     return try {
-        val info = context.packageManager.getPackageInfo("org.lsposed.manager", 0)
-        info.versionName ?: "installed (unknown version)"
+        val info = context.packageManager.getPackageInfo(context.packageName, 0)
+        val bootWallTime = System.currentTimeMillis() - SystemClock.elapsedRealtime()
+        info.lastUpdateTime > bootWallTime
     } catch (e: Throwable) {
-        "not installed"
+        false
     }
 }
 
@@ -426,6 +452,7 @@ private fun SignatureRefusedScreen() {
 @Composable
 private fun Header(
     active: Boolean,
+    needsReboot: Boolean,
     lastActiveText: String,
     onRefresh: () -> Unit,
     onDiagnose: () -> Unit,
@@ -472,16 +499,22 @@ private fun Header(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = if (active) "Activated" else "Module is inactive",
+                            text = when {
+                                active -> "Activated"
+                                needsReboot -> "Reboot required"
+                                else -> "Module is inactive"
+                            },
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
                         Text(
-                            text = if (active) {
-                                "The module ran in a target app this boot."
-                            } else {
-                                "Enable Device Mask in LSPosed and reboot."
+                            text = when {
+                                active -> "The module ran in a target app this boot."
+                                needsReboot -> "Device Mask was updated after the " +
+                                    "last boot. Restart your phone so LSPosed " +
+                                    "loads the new module, then open a ticked app."
+                                else -> "Enable Device Mask in LSPosed and reboot."
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = Color(0xFFE0E0E0)
@@ -749,6 +782,10 @@ private fun DiagnoseScreen(state: MaskState, onBack: () -> Unit) {
                 "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})"
             )
             ValueRow("LSPosed Manager", lsposedManagerVersion(context))
+            ValueRow(
+                "Reboot required",
+                if (needsReboot(context)) "Yes" else "No"
+            )
             ValueRow("App version", appVersion(context))
         }
         SectionCard(title = "Toggles") {

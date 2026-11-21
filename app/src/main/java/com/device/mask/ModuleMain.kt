@@ -2,9 +2,11 @@ package com.device.mask
 
 import android.app.Application
 import android.content.ComponentName
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.location.Location
+import android.net.Uri
 import android.net.wifi.WifiInfo
 import android.os.Build
 import android.telephony.TelephonyManager
@@ -152,7 +154,12 @@ class ModuleMain : XposedModule() {
      * broadcast goes to ActiveEventReceiver in the app's own process,
      * which writes the same KEY_LAST_ACTIVE_TIME into the same prefs
      * file MainActivity reads. Only the time is sent — no settings.
-     * Best-effort: a failure here never breaks the target app.
+     *
+     * v1.0.28 adds a second channel: the same marker is also written
+     * through the app's ActivationProvider ContentProvider, so the card
+     * turns green even if the broadcast is dropped. Either channel
+     * alone is enough. Best-effort: a failure here never breaks the
+     * target app.
      */
     private fun markActive(app: Context) {
         try {
@@ -170,6 +177,19 @@ class ModuleMain : XposedModule() {
                 putExtra(Prefs.EXTRA_ACTIVE_TIME, System.currentTimeMillis())
             }
             app.sendBroadcast(broadcast)
+        } catch (e: Throwable) {
+            // Marker failure must never break the target app.
+        }
+        // Second channel (v1.0.28): same marker, same time, through
+        // the app's ContentProvider. Best-effort, never break the app.
+        try {
+            val values = ContentValues().apply {
+                put("time", System.currentTimeMillis())
+            }
+            app.contentResolver.insert(
+                Uri.parse("content://com.device.mask.activation/activate"),
+                values
+            )
         } catch (e: Throwable) {
             // Marker failure must never break the target app.
         }
