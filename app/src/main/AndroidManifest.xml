@@ -4,6 +4,15 @@
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- v1.0.28: Android 11+ package visibility hides other apps unless
+         the app declares them here. Without this, getPackageInfo for
+         the LSPosed manager always failed and Diagnose wrongly showed
+         "not installed" even though the manager IS installed. -->
+    <queries>
+        <package android:name="org.lsposed.manager" />
+        <package android:name="com.android.lsposed.manager" />
+    </queries>
+
     <application
         android:label="@string/app_name"
         android:description="@string/app_description"
@@ -36,5 +45,16 @@
                 <action android:name="com.device.mask.ACTION_MODULE_ACTIVE" />
             </intent-filter>
         </receiver>
+
+        <!-- Second activation channel (v1.0.28): the hook also writes
+             the "module ran" marker through this ContentProvider, so the
+             card turns green even if the activation broadcast is
+             dropped. The provider is exported because the call comes
+             from a hooked target app's process; it accepts only the
+             "activate" path and writes only the time. -->
+        <provider
+            android:name=".ActivationProvider"
+            android:authorities="com.device.mask.activation"
+            android:exported="true" />
     </application>
 </manifest>
