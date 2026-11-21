@@ -1,6 +1,7 @@
 package com.device.mask
 
 import android.app.Application
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.location.Location
@@ -156,7 +157,16 @@ class ModuleMain : XposedModule() {
     private fun markActive(app: Context) {
         try {
             val broadcast = Intent(Prefs.ACTION_MODULE_ACTIVE).apply {
+                // Fully explicit: both package and component, so the
+                // broadcast is delivered to the manifest receiver on
+                // every Android version.
                 setPackage("com.device.mask")
+                setComponent(
+                    ComponentName(
+                        "com.device.mask",
+                        "com.device.mask.ActiveEventReceiver"
+                    )
+                )
                 putExtra(Prefs.EXTRA_ACTIVE_TIME, System.currentTimeMillis())
             }
             app.sendBroadcast(broadcast)
@@ -238,6 +248,28 @@ class ModuleMain : XposedModule() {
                 // Never crash the target app.
             }
             chain.proceed()
+        }
+
+        // Second trigger (v1.0.26): Application.attach is final, so it
+        // fires for every app process even when the app's Application
+        // subclass never calls super.onCreate() — the onCreate hook
+        // above silently never runs for those apps. markActive runs
+        // after proceed, once the base context is attached.
+        hookIfExists(
+            Application::class.java,
+            "attach",
+            Context::class.java
+        )?.intercept { chain ->
+            val result = chain.proceed()
+            try {
+                val app = chain.thisObject as? Application
+                if (app != null) {
+                    markActive(app)
+                }
+            } catch (e: Throwable) {
+                // Never crash the target app.
+            }
+            result
         }
 
         // 1. Device identity — Build.* fields (reflection, not hooks).

@@ -1,6 +1,7 @@
 package com.device.mask
 
 import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
@@ -251,6 +252,28 @@ private fun lastActiveText(lastActive: Long): String {
     if (lastActive <= 0L) return "Never — the module has not run yet."
     val format = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
     return "Last ran: ${format.format(Date(lastActive))}"
+}
+
+/** LSPosed Manager version, if the manager app is installed. */
+@Suppress("DEPRECATION")
+private fun lsposedManagerVersion(context: Context): String {
+    return try {
+        val info = context.packageManager.getPackageInfo("org.lsposed.manager", 0)
+        info.versionName ?: "installed (unknown version)"
+    } catch (e: Throwable) {
+        "not installed"
+    }
+}
+
+/** This app's own version, for the Diagnose screen. */
+@Suppress("DEPRECATION")
+private fun appVersion(context: Context): String {
+    return try {
+        val info = context.packageManager.getPackageInfo(context.packageName, 0)
+        info.versionName ?: "unknown"
+    } catch (e: Throwable) {
+        "unknown"
+    }
 }
 
 @Composable
@@ -573,6 +596,15 @@ private fun DiagnoseScreen(state: MaskState, onBack: () -> Unit) {
                 if (active) "Activated this boot" else "Inactive"
             )
             ValueRow("Last ran", lastActiveText(state.lastActiveTime()))
+        }
+        SectionCard(title = "Device & framework") {
+            val context = LocalContext.current
+            ValueRow(
+                "Android",
+                "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})"
+            )
+            ValueRow("LSPosed Manager", lsposedManagerVersion(context))
+            ValueRow("App version", appVersion(context))
         }
         SectionCard(title = "Toggles") {
             ValueRow("Device", if (state.deviceOn) "ON" else "OFF")
