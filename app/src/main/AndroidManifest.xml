@@ -23,5 +23,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Receives the hook's "module ran" broadcast and records only
+             the time it happened. The broadcast comes from a hooked
+             target app's process, so the receiver must be exported;
+             setPackage("com.device.mask") on the sending side restricts
+             it to this app. Same pattern as SureSIM's CopyEventReceiver. -->
+        <receiver
+            android:name=".ActiveEventReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.device.mask.ACTION_MODULE_ACTIVE" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>
