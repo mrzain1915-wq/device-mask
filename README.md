@@ -7,7 +7,7 @@ It is display-only spoofing: the checker or tester app shows the chosen
 values, the real eSIM, hardware, SIM and system values are never changed.
 
 - Package: `com.device.mask`
-- Current version: **1.0.26** (versionCode 65)
+- Current version: **1.0.27** (versionCode 66)
 - Requires: rooted Android (KernelSU or Magisk) + LSPosed / Vector, Android 10+
 
 ## What you can do with it
@@ -52,12 +52,18 @@ values, while your real device, SIM and eSIM stay exactly as they are.
   the values apps will see, so a mismatch can be traced instead of
   guessed.
 
-## Free tier
+## Free tier and Premium
 
-Only the first 10 models and the first 10 countries are selectable.
-Everything after that is shown as locked. There is no premium unlock,
-login, trial or redeem code in this app — premium is simply not
-included.
+Only the first 10 models and the first 10 countries are selectable
+on the free tier. Everything after that is shown as locked.
+
+Premium unlocks all 62 models and all 118 countries. Log in on the
+Account screen (side menu), then enter a redeem code on the Premium
+screen. Redeem codes are given out by the owner; only their SHA-256
+hashes are stored in the app, so a code can only be activated by
+entering the real code. Premium stays on the account that redeemed it
+and is cleared on logout. There is no server and no payment in the
+app.
 
 ## Installation
 
@@ -81,7 +87,7 @@ pinned key (see Building) so updates install over each other.
 Use the GitHub Actions workflow in `.github/workflows/build-apk.yml`:
 push this project to a GitHub repo, open the **Actions** tab, run the
 workflow, then download the `android-release` artifact and install
-`Device-Mask-v1.0.26-Android.apk`. The build signs with the pinned
+`Device-Mask-v1.0.27-Android.apk`. The build signs with the pinned
 debug key in `app/debug.keystore`, so future updates install over it.
 
 The project uses AGP 9.1.0, Gradle 9.4.1, Kotlin 2.2.20, Compose BOM
