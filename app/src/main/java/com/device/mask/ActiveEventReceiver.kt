@@ -26,6 +26,7 @@ class ActiveEventReceiver : BroadcastReceiver() {
                 .edit()
                 .putLong(Prefs.KEY_LAST_ACTIVE_TIME, time)
                 .apply()
+            DiagLog.log(context, "Activation broadcast received — module ran")
         } catch (e: Throwable) {
             // Recording the time is best-effort only.
         }
