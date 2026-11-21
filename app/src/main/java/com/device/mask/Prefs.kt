@@ -60,6 +60,16 @@ object Prefs {
     // actually loaded (green Activated) instead of guessing.
     const val KEY_LAST_ACTIVE_TIME = "last_active_time"
 
+    // --- Activation broadcast (v1.0.25): the hook CANNOT write the marker
+    // through RemotePreferences — LSPosed's RemotePreferences.edit()
+    // throws UnsupportedOperationException ("Read only implementation"),
+    // so v1.0.24's card could never turn green. Instead the hook sends
+    // this explicit broadcast (package-restricted to com.device.mask)
+    // and ActiveEventReceiver records the time in the app's own prefs.
+    // Only the time is sent — no settings or identity values.
+    const val ACTION_MODULE_ACTIVE = "com.device.mask.ACTION_MODULE_ACTIVE"
+    const val EXTRA_ACTIVE_TIME = "active_time"
+
     // --- Free tier limits ---
     const val FREE_MODEL_COUNT = 10
     const val FREE_COUNTRY_COUNT = 10

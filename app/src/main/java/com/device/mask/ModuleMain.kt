@@ -1,5 +1,8 @@
 package com.device.mask
 
+import android.app.Application
+import android.content.Context
+import android.content.Intent
 import android.location.Location
 import android.net.wifi.WifiInfo
 import android.os.Build
@@ -138,18 +141,27 @@ class ModuleMain : XposedModule() {
     }
 
     /**
-     * Activation marker: writes the current time into the module app's
-     * preferences through RemotePreferences, so the app can prove the
-     * module actually ran in this boot (green Activated card) instead
-     * of guessing. Best-effort — a failure here never breaks the hooks.
+     * Activation marker (v1.0.25): tell the Device Mask app the module
+     * ran, via an explicit broadcast — never via RemotePreferences.
+     *
+     * v1.0.24 wrote the marker with getRemotePreferences(...).edit(),
+     * but LSPosed's RemotePreferences is read-only: edit() throws
+     * UnsupportedOperationException ("Read only implementation"), caught
+     * silently, so the activation card could NEVER turn green. The
+     * broadcast goes to ActiveEventReceiver in the app's own process,
+     * which writes the same KEY_LAST_ACTIVE_TIME into the same prefs
+     * file MainActivity reads. Only the time is sent — no settings.
+     * Best-effort: a failure here never breaks the target app.
      */
-    private fun markActive() {
+    private fun markActive(app: Context) {
         try {
-            getRemotePreferences(Prefs.FILE_NAME).edit()
-                .putLong(Prefs.KEY_LAST_ACTIVE_TIME, System.currentTimeMillis())
-                .apply()
+            val broadcast = Intent(Prefs.ACTION_MODULE_ACTIVE).apply {
+                setPackage("com.device.mask")
+                putExtra(Prefs.EXTRA_ACTIVE_TIME, System.currentTimeMillis())
+            }
+            app.sendBroadcast(broadcast)
         } catch (e: Throwable) {
-            // Marker write failure must never break the target app.
+            // Marker failure must never break the target app.
         }
     }
 
@@ -209,8 +221,24 @@ class ModuleMain : XposedModule() {
 
         val settings = readSettings()
 
-        // Prove the module ran: the app reads this timestamp back.
-        markActive()
+        // Prove the module ran: send the activation broadcast from the
+        // target app's Application.onCreate (same pattern SureSIM uses
+        // to reach the ClipboardManager). onPackageReady itself is too
+        // early — the Application object does not exist yet there.
+        hookIfExists(
+            Application::class.java,
+            "onCreate"
+        )?.intercept { chain ->
+            try {
+                val app = chain.thisObject as? Application
+                if (app != null) {
+                    markActive(app)
+                }
+            } catch (e: Throwable) {
+                // Never crash the target app.
+            }
+            chain.proceed()
+        }
 
         // 1. Device identity — Build.* fields (reflection, not hooks).
         if (settings.deviceOn) {
