@@ -487,7 +487,10 @@ private fun Header(
             Spacer(modifier = Modifier.height(16.dp))
             Card(
                 colors = CardDefaults.cardColors(
-                    containerColor = if (active) Color(0xFF1B5E20) else Color(0xFF7F0000)
+                    // v1.0.29: bright green + white tick when active,
+                    // bright red + white cross when not — visible at a
+                    // glance, as the owner asked.
+                    containerColor = if (active) Green else Red
                 ),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()
@@ -500,7 +503,7 @@ private fun Header(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = when {
-                                active -> "Activated"
+                                active -> "Module is active"
                                 needsReboot -> "Reboot required"
                                 else -> "Module is inactive"
                             },
@@ -525,6 +528,14 @@ private fun Header(
                             color = Color(0xFFB0BEC5)
                         )
                     }
+                    Text(
+                        text = if (active) "✓" else "✕",
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
                     TextButton(onClick = onRefresh) {
                         Text(text = "Refresh", color = Color.White)
                     }
