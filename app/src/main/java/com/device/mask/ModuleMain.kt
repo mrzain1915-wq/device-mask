@@ -42,6 +42,18 @@ import java.util.TimeZone
  */
 class ModuleMain : XposedModule() {
 
+    companion object {
+        // The Application of the hooked process, stored the first time
+        // Application.attach / onCreate fires (same pattern as the
+        // upstream SureSIM module). Used by reportActive() to signal
+        // the Device Mask app whenever ANY hook runs.
+        @Volatile var application: Application? = null
+    }
+
+    // Last time this process sent an activation signal, for the
+    // 30-second throttle in reportActive().
+    @Volatile private var lastSignalTime = 0L
+
     /** One snapshot of the user's settings, read fresh on every hook call. */
     private data class Settings(
         val deviceOn: Boolean,
@@ -71,6 +83,11 @@ class ModuleMain : XposedModule() {
      * to the defaults — device/location/network/eSIM on, privacy IDs off.
      */
     private fun readSettings(): Settings {
+        // v1.0.29: every spoofing hook calls readSettings() first, so
+        // reporting here makes EVERY hook prove the module ran — not
+        // only Application.attach / onCreate. In onPackageReady no
+        // Application exists yet, so this is a harmless no-op there.
+        reportActive()
         return try {
             val prefs = getRemotePreferences(Prefs.FILE_NAME)
             val modelIndex = prefs.getInt(
@@ -140,6 +157,45 @@ class ModuleMain : XposedModule() {
                 imsi = "",
                 phone = ""
             )
+        }
+    }
+
+    /**
+     * Fallback Application lookup when the companion `application`
+     * was never stored (e.g. a hook ran in a process whose
+     * Application.attach / onCreate interceptors never fired).
+     * ActivityThread.currentApplication() is hidden API, so it is
+     * reached by reflection. Returns null on any failure.
+     */
+    private fun currentApplicationViaReflection(): Application? {
+        return try {
+            val activityThread = Class.forName("android.app.ActivityThread")
+            val method = activityThread.getDeclaredMethod("currentApplication")
+            method.isAccessible = true
+            method.invoke(null) as? Application
+        } catch (e: Throwable) {
+            null
+        }
+    }
+
+    /**
+     * Report that the module ran in this process (v1.0.29). Throttled
+     * to at most one signal per 30 seconds per process, so a chatty
+     * target app is not spammed with broadcasts. Uses the stored
+     * Application first, else the ActivityThread reflection fallback;
+     * if neither is available there is nothing to report yet and this
+     * returns silently. Sends through the existing markActive(), which
+     * uses BOTH channels (broadcast + ActivationProvider).
+     * Never crashes the target app.
+     */
+    private fun reportActive() {
+        try {
+            if (System.currentTimeMillis() - lastSignalTime < 30_000L) return
+            val app = application ?: currentApplicationViaReflection() ?: return
+            markActive(app)
+            lastSignalTime = System.currentTimeMillis()
+        } catch (e: Throwable) {
+            // Reporting must never break the target app.
         }
     }
 
@@ -262,6 +318,7 @@ class ModuleMain : XposedModule() {
             try {
                 val app = chain.thisObject as? Application
                 if (app != null) {
+                    application = app
                     markActive(app)
                 }
             } catch (e: Throwable) {
@@ -284,6 +341,7 @@ class ModuleMain : XposedModule() {
             try {
                 val app = chain.thisObject as? Application
                 if (app != null) {
+                    application = app
                     markActive(app)
                 }
             } catch (e: Throwable) {
