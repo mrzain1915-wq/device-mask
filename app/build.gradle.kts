@@ -11,8 +11,8 @@ android {
         applicationId = "com.device.mask"
         minSdk = 29
         targetSdk = 36
-        versionCode = 67
-        versionName = "1.0.28"
+        versionCode = 68
+        versionName = "1.0.29"
     }
 
     // FIX for "App not installed": pin the debug signing key.
