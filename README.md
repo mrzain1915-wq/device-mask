@@ -7,7 +7,7 @@ It is display-only spoofing: the checker or tester app shows the chosen
 values, the real eSIM, hardware, SIM and system values are never changed.
 
 - Package: `com.device.mask`
-- Current version: **1.0.28** (versionCode 67)
+- Current version: **1.0.29** (versionCode 68)
 - Requires: rooted Android (KernelSU or Magisk) + LSPosed / Vector, Android 10+
 
 ## What you can do with it
@@ -87,7 +87,7 @@ pinned key (see Building) so updates install over each other.
 Use the GitHub Actions workflow in `.github/workflows/build-apk.yml`:
 push this project to a GitHub repo, open the **Actions** tab, run the
 workflow, then download the `android-release` artifact and install
-`Device-Mask-v1.0.28-Android.apk`. The build signs with the pinned
+`Device-Mask-v1.0.29-Android.apk`. The build signs with the pinned
 debug key in `app/debug.keystore`, so future updates install over it.
 
 The project uses AGP 9.1.0, Gradle 9.4.1, Kotlin 2.2.20, Compose BOM
